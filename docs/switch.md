@@ -3,8 +3,9 @@
 Horizon runs on a Nintendo Switch with custom firmware (Atmosphère) as a homebrew program,
 `horizon.nro`, started from the Homebrew Menu. It is the same game as on a computer, built
 for libnx: OpenGL through switch-mesa instead of Vulkan, the Joy-Cons through the game's own
-controller support, the SD card for the game's folder. **Status: experimental.** It builds and
-links; see [what is missing](#what-is-missing).
+controller support, the SD card for the game's folder. **Status: experimental.** It starts,
+creates and loads worlds and plays single player at about 25 to 30 FPS (render distance 4);
+see [what is missing](#what-is-missing).
 
 You need your own Minecraft: Java Edition 26.3 (a Microsoft account that owns it): the game's
 resources are prepared from your installation on a computer, exactly as for the desktop game,
@@ -16,7 +17,7 @@ Everything happens in a container (podman or docker): devkitPro's devkitA64 imag
 switch-mesa and Rust nightly with `rust-src` (`packaging/switch/Dockerfile`).
 
 ```sh
-switch/build.sh            # target/switch/horizon.nro (release: thin LTO)
+switch/build.sh            # target/switch/horizon.nro (release: fat LTO, about 10 minutes)
 switch/build.sh smoke      # target/switch/horizon-smoke.nro, a test of Rust's std on the console
 HORIZON_SWITCH_PROFILE=fast switch/build.sh   # quicker to build, larger, slower
 switch/build.sh check      # cargo check for the Switch
@@ -127,5 +128,5 @@ otherwise the `.nro` carries `switch/nro/icon.jpg`.
   `audout`, 16-bit stereo at 48 kHz, about 85 ms queued); there is no microphone input.
 - No mods (wasmtime), no Discord, no clipboard, no LAN keepalive tuning; one controller
   (player 1). The LAN server polls every 5 ms (mio has no waker without pipes).
-- Render distance defaults to 6. The Switch has 4 GB shared with the GPU; far terrain and
+- Render distance defaults to 4 (the Full Performance preset). The Switch has 4 GB shared with the GPU; far terrain and
   high settings will not fit.
