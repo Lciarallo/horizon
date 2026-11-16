@@ -23,10 +23,11 @@ const EGL_PLATFORM_SURFACELESS_MESA: u32 = 0x31DD;
 const EGL_GL_COLORSPACE_KHR: u32 = 0x309D;
 const EGL_GL_COLORSPACE_SRGB_KHR: u32 = 0x3089;
 
-#[cfg(not(Emscripten))]
+#[cfg(not(any(Emscripten, target_os = "horizon")))]
 type EglInstance = khronos_egl::DynamicInstance<khronos_egl::EGL1_4>;
 
-#[cfg(Emscripten)]
+// Emscripten, and the Nintendo Switch (Horizon's port): libEGL is linked statically.
+#[cfg(any(Emscripten, target_os = "horizon"))]
 type EglInstance = khronos_egl::Instance<khronos_egl::Static>;
 
 type EglLabel = *const ffi::c_void;
@@ -725,11 +726,11 @@ impl crate::Instance for Instance {
         use raw_window_handle::RawDisplayHandle as Rdh;
 
         profiling::scope!("Init OpenGL (EGL) Backend");
-        #[cfg(Emscripten)]
+        #[cfg(any(Emscripten, target_os = "horizon"))]
         let egl_result: Result<EglInstance, khronos_egl::Error> =
             Ok(khronos_egl::Instance::new(khronos_egl::Static));
 
-        #[cfg(not(Emscripten))]
+        #[cfg(not(any(Emscripten, target_os = "horizon")))]
         let egl_result = if cfg!(windows) {
             unsafe {
                 khronos_egl::DynamicInstance::<khronos_egl::EGL1_4>::load_required_from_filename(
@@ -760,12 +761,23 @@ impl crate::Instance for Instance {
             client_ext_str.split_whitespace().collect::<Vec<_>>()
         );
 
-        #[cfg(not(Emscripten))]
+        #[cfg(not(any(Emscripten, target_os = "horizon")))]
         let egl1_5 = egl.upcast::<khronos_egl::EGL1_5>();
 
-        #[cfg(Emscripten)]
+        #[cfg(any(Emscripten, target_os = "horizon"))]
         let egl1_5: Option<&Arc<EglInstance>> = Some(&egl);
 
+        // The Nintendo Switch (Horizon's port): switch-mesa's one platform, its default display,
+        // whatever the window system handle says (winit hands over an Android one).
+        #[cfg(target_os = "horizon")]
+        let (display, wsi_kind) = {
+            let _ = (&egl1_5, &client_ext_str);
+            let display = unsafe { egl.get_display(khronos_egl::DEFAULT_DISPLAY) }.ok_or_else(|| {
+                crate::InstanceError::new("Failed to get the Switch's EGL display".into())
+            })?;
+            (display, WindowKind::Unknown)
+        };
+        #[cfg(not(target_os = "horizon"))]
         let (display, wsi_kind) = match (desc.display.map(|d| d.as_raw()), egl1_5) {
             (Some(Rdh::Wayland(wayland_display_handle)), Some(egl))
                 if client_ext_str.contains("EGL_EXT_platform_wayland") =>
@@ -964,6 +976,10 @@ impl crate::Instance for Instance {
                 }
             }
             (Rwh::Wayland(_), _) => {}
+            // Nintendo Switch: winit's Horizon backend hands libnx's NWindow* over as an
+            // Android window, which EGL takes as is (no ANativeWindow geometry to set).
+            #[cfg(target_os = "horizon")]
+            (Rwh::AndroidNdk(_), _) => {}
             #[cfg(Emscripten)]
             (Rwh::Web(_), _) => {}
             other => {
@@ -1317,6 +1333,7 @@ impl crate::Surface for Surface {
                     if cfg!(any(
                         target_os = "android",
                         target_os = "macos",
+                        target_os = "horizon",
                         target_env = "ohos"
                     )) || cfg!(windows)
                         || self.wsi.kind == WindowKind::AngleX11
@@ -1341,10 +1358,10 @@ impl crate::Surface for Surface {
                 }
                 attributes.push(khronos_egl::ATTRIB_NONE as i32);
 
-                #[cfg(not(Emscripten))]
+                #[cfg(not(any(Emscripten, target_os = "horizon")))]
                 let egl1_5 = self.egl.instance.upcast::<khronos_egl::EGL1_5>();
 
-                #[cfg(Emscripten)]
+                #[cfg(any(Emscripten, target_os = "horizon"))]
                 let egl1_5: Option<&Arc<EglInstance>> = Some(&self.egl.instance);
 
                 // Careful, we can still be in 1.4 version even if `upcast` succeeds

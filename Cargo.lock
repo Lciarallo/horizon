@@ -677,12 +677,11 @@ dependencies = [
 [[package]]
 name = "cpal"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbd307f43cc2a697e2d1f8bc7a1d824b5269e052209e28883e5bc04d095aaa3f"
 dependencies = [
  "alsa",
  "coreaudio-rs",
  "dasp_sample",
+ "horizon-switch",
  "jni 0.21.1",
  "js-sys",
  "libc",
@@ -1535,6 +1534,7 @@ dependencies = [
  "horizon-server-files",
  "horizon-shader-api",
  "horizon-shaders",
+ "horizon-switch",
  "horizon-system",
  "horizon-telemetry",
  "horizon-theme",
@@ -1616,6 +1616,7 @@ dependencies = [
  "horizon-server-files",
  "horizon-shader-api",
  "horizon-shaders",
+ "horizon-switch",
  "horizon-telemetry",
  "horizon-theme",
  "horizon-threads",
@@ -2102,6 +2103,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "horizon-switch"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "getrandom 0.2.17",
+]
+
+[[package]]
+name = "horizon-switch-libmimalloc-sys"
+version = "0.1.0"
+dependencies = [
+ "libmimalloc-sys",
+]
+
+[[package]]
+name = "horizon-switch-mimalloc"
+version = "0.1.0"
+dependencies = [
+ "mimalloc",
+]
+
+[[package]]
 name = "horizon-system"
 version = "0.1.0"
 
@@ -2128,10 +2151,10 @@ version = "0.1.0"
 dependencies = [
  "addr2line",
  "framehop",
+ "horizon-switch-libmimalloc-sys",
+ "horizon-switch-mimalloc",
  "libc",
- "libmimalloc-sys",
  "memmap2",
- "mimalloc",
  "object",
  "rustc-demangle",
  "windows-sys 0.61.2",
@@ -2520,9 +2543,7 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "libc"
-version = "0.2.190"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
+version = "0.2.191"
 
 [[package]]
 name = "libloading"
@@ -2794,8 +2815,6 @@ dependencies = [
 [[package]]
 name = "mio"
 version = "1.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1788edb87fdc09c7e26304471e2f5be8cdefb1b6930d6e3985fc02ff53bf86ee"
 dependencies = [
  "libc",
  "log",
@@ -4127,8 +4146,6 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 [[package]]
 name = "ring"
 version = "0.17.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7"
 dependencies = [
  "cc",
  "cfg-if",
@@ -5353,8 +5370,6 @@ checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 [[package]]
 name = "wgpu"
 version = "30.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "527ccdf43dd5b2e8676eed9984ce00e2bbb0a1b85b70c1969dcb6cd2eb55ab9e"
 dependencies = [
  "arrayvec",
  "bitflags 2.13.2",
@@ -5383,8 +5398,6 @@ dependencies = [
 [[package]]
 name = "wgpu-core"
 version = "30.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14"
 dependencies = [
  "arrayvec",
  "bit-set",
@@ -5868,8 +5881,6 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 [[package]]
 name = "winit"
 version = "0.30.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6755fa58a9f8350bd1e472d4c3fcc25f824ec358933bba33306d0b63df5978d"
 dependencies = [
  "ahash",
  "android-activity",
@@ -5884,6 +5895,7 @@ dependencies = [
  "core-graphics",
  "cursor-icon",
  "dpi",
+ "horizon-switch",
  "js-sys",
  "libc",
  "memmap2",

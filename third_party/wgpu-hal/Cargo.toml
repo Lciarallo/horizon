@@ -353,6 +353,15 @@ optional = true
 version = "0.6"
 optional = true
 
+# Nintendo Switch (Horizon's port): switch-mesa's libEGL is a static library.
+[target.'cfg(target_os = "horizon")'.dependencies.khronos-egl]
+version = "6"
+features = [
+    "static",
+    "no-pkg-config",
+]
+optional = true
+
 [target.'cfg(target_os = "emscripten")'.dependencies.khronos-egl]
 version = "6"
 features = [

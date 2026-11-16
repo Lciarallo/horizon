@@ -195,9 +195,14 @@ pub(in crate::game) enum PadEvent {
     Back(PadId),
 }
 
+/// The Nintendo Switch: player 1's controller through libnx (docs/switch.md).
+#[cfg(all(not(feature = "controllers"), target_os = "horizon"))]
+#[path = "pad/switch_pad.rs"]
+mod hardware;
+
 /// A build without the `controllers` feature (the server build, which must not need libudev): no
 /// hardware pads, only `horizon-ctl pad`'s virtual one.
-#[cfg(not(feature = "controllers"))]
+#[cfg(all(not(feature = "controllers"), not(target_os = "horizon")))]
 mod hardware {
     use super::{super::Game, Pads};
     use horizon_client::gamepad::{PadState, Pulse, Rumble};
@@ -414,6 +419,10 @@ impl Game<'_> {
         } else {
             hardware
         };
+        // The Nintendo Switch: the on-screen controls in a world, as a second pad
+        // (game/switch_touch.rs).
+        #[cfg(target_os = "horizon")]
+        let hardware = hardware.merge(&self.switch_touch_frame(&hardware));
         // A person's pad, for `input-log` and the repro recording; the virtual
         // pad is an agent's `pad` line and is recorded as that.
         let hardware_edges = self.pad.hardware_edges(hardware);

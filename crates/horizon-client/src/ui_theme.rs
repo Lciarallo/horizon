@@ -766,6 +766,52 @@ pub fn draw_boot(atlas: &HudAtlas, batch: &mut HudBatch, logs: &[String]) {
     draw_boot_log(atlas, batch, logs);
 }
 
+/// The boot screen with a progress bar instead of the console's lines: the Nintendo Switch,
+/// where the first load takes minutes and a wall of log text reads as a hang (docs/switch.md).
+/// `stage` is the loader's current step, `fraction` how far through the steps it is,
+/// `elapsed` the seconds since the game started; a highlight sweeps the bar so a long step
+/// still shows the game at work.
+pub fn draw_boot_progress(atlas: &HudAtlas, batch: &mut HudBatch, stage: &str, fraction: f32, elapsed: f32) {
+    batch.fill(
+        atlas,
+        0.0,
+        0.0,
+        batch.width,
+        batch.height,
+        color::hex(0x000000, 255),
+    );
+    wordmark(atlas, batch);
+    let mut ui = Ui::new(atlas, batch, (0.0, 0.0));
+    let bar_w = (ui.w * 0.46).min(560.0);
+    let bar_h = 6.0;
+    let x = (ui.w - bar_w) / 2.0;
+    let y = ui.h * 0.70;
+    let fraction = fraction.clamp(0.0, 1.0);
+    ui.rounded(x, y, bar_w, bar_h, bar_h / 2.0, color::hex(0x24292E, 255));
+    if fraction > 0.0 {
+        ui.rounded(x, y, (bar_w * fraction).max(bar_h), bar_h, bar_h / 2.0, color::hex(0xF0795A, 255));
+    }
+    // The sweep: a soft segment crossing the bar every two seconds.
+    let seg = bar_w * 0.14;
+    let t = (elapsed * 0.5).fract();
+    ui.rounded(x + (bar_w - seg) * t, y, seg, bar_h, bar_h / 2.0, color::hex(0xFFFFFF, 56));
+    let size = (ui.w / 60.0).clamp(micro() * 1.15, 22.0);
+    let small = micro();
+    ui.text_centered(Face::Medium, size, ui.w / 2.0, y + 18.0, BOOT_TEXT, stage);
+    let secs = elapsed as u64;
+    let status = format!("{:.0}%  ·  {}:{:02}", fraction * 100.0, secs / 60, secs % 60);
+    ui.text_centered(Face::Mono, small, ui.w / 2.0, y + 18.0 + size * 1.6, BOOT_LOG, &status);
+    ui.text_centered(
+        Face::Regular,
+        small,
+        ui.w / 2.0,
+        ui.h - small * 3.0,
+        BOOT_LOG,
+        "The first load on the Switch takes a few minutes",
+    );
+    ui.finish();
+}
+
 /// The wordmark with its tagline, centred.
 fn wordmark(atlas: &HudAtlas, batch: &mut HudBatch) {
     let mut ui = Ui::new(atlas, batch, (0.0, 0.0));

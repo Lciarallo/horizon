@@ -1,0 +1,18 @@
+[package]
+name = "horizon-smoke"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Built alone: `switch/build.sh smoke`.
+[workspace]
+
+[dependencies]
+horizon-switch = { path = "../../crates/horizon-switch" }
+
+[profile.release]
+debug = 1
+
+# The workspace's copy: libc with the Switch's newlib/libnx layouts (docs/switch.md).
+[patch.crates-io]
+libc = { path = "../../third_party/libc" }

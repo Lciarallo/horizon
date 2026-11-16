@@ -22,6 +22,8 @@ pub(super) fn observe(
     graph.dynamic_scale = g
         .dynamic_resolution
         .then(|| dynamic.scale(g.resolution_scale));
+    #[cfg(target_os = "horizon")]
+    switch_frame_report(settled, cpu_ms, r.gpu_times.last().copied(), frame_ms);
     if !settled {
         return;
     }
@@ -79,4 +81,47 @@ pub(super) fn apply_world_post(r: &mut Renderer, g: &Graphics, scale: u32) {
         g.upscaling.ratio(),
         g.upscaling_sharpness as f32 / 100.0,
     );
+}
+
+/// The Nintendo Switch (docs/switch.md): every 5 s, the frame rate and where a frame's time
+/// goes (CPU, GPU, whole), averaged and at worst, to tell which side holds the frame rate.
+#[cfg(target_os = "horizon")]
+fn switch_frame_report(settled: bool, cpu_ms: f32, gpu_ms: Option<f32>, frame_ms: f32) {
+    use std::sync::Mutex;
+    use std::time::Instant;
+    struct Acc {
+        since: Option<Instant>,
+        frames: u32,
+        cpu: f32,
+        gpu: f32,
+        gpu_n: u32,
+        frame: f32,
+        worst: f32,
+    }
+    static ACC: Mutex<Acc> = Mutex::new(Acc { since: None, frames: 0, cpu: 0.0, gpu: 0.0, gpu_n: 0, frame: 0.0, worst: 0.0 });
+    let Ok(mut a) = ACC.lock() else { return };
+    let since = *a.since.get_or_insert_with(Instant::now);
+    a.frames += 1;
+    a.cpu += cpu_ms;
+    a.frame += frame_ms;
+    a.worst = a.worst.max(frame_ms);
+    if let Some(g) = gpu_ms {
+        a.gpu += g;
+        a.gpu_n += 1;
+    }
+    let secs = since.elapsed().as_secs_f32();
+    if secs >= 5.0 {
+        let n = a.frames as f32;
+        let gpu = if a.gpu_n > 0 { format!("{:.1}", a.gpu / a.gpu_n as f32) } else { "-".into() };
+        log::info!(
+            "Horizon: {:.1} fps{}: frame {:.1} ms (worst {:.0}), CPU {:.1} ms, GPU {} ms",
+            n / secs,
+            if settled { "" } else { " (loading)" },
+            a.frame / n,
+            a.worst,
+            a.cpu / n,
+            gpu
+        );
+        *a = Acc { since: Some(Instant::now()), frames: 0, cpu: 0.0, gpu: 0.0, gpu_n: 0, frame: 0.0, worst: 0.0 };
+    }
 }

@@ -1,5 +1,5 @@
 [workspace]
-exclude = ["launcher", "crates/horizon-telemetry-server", "crates/horizon-mod-registry", "third_party/wgpu-hal", "third_party/naga", "third_party/libmimalloc-sys"]
+exclude = ["switch/smoke", "switch/tools/abi_check", "third_party/libc", "third_party/winit", "third_party/mio", "third_party/ring", "third_party/wgpu", "third_party/wgpu-core", "third_party/cpal", "launcher", "crates/horizon-telemetry-server", "crates/horizon-mod-registry", "third_party/wgpu-hal", "third_party/naga", "third_party/libmimalloc-sys"]
 members = [
     "crates/horizon-addresses",
     "crates/horizon-core",
@@ -29,6 +29,8 @@ members = [
     "crates/horizon-prepare",
     "crates/horizon-telemetry",
     "crates/horizon-system",
+    # Nintendo Switch homebrew platform layer (libnx); empty on other targets (docs/switch.md).
+    "crates/horizon-switch",
     "crates/horizon-platform",
     "crates/horizon-hooks",
     "crates/horizon-game",
@@ -92,6 +94,20 @@ naga = { path = "third_party/naga" }
 # game died before main on CPUs without it (Core 2, #7264; THIRD_PARTY_NOTICES.md). Drop this and
 # the folder once a libmimalloc-sys release has microsoft/mimalloc#1291's fix.
 libmimalloc-sys = { path = "third_party/libmimalloc-sys" }
+# libc 0.2.191 with the Nintendo Switch's newlib/libnx layouts (aarch64 `horizon`), checked
+# against devkitA64's headers by switch/tools/abi_check. std uses the same copy (docs/switch.md).
+libc = { path = "third_party/libc" }
+# winit 0.30.13 with a Nintendo Switch (libnx) backend: src/platform_impl/horizon (docs/switch.md).
+winit = { path = "third_party/winit" }
+# mio 1.2.4 knowing the Nintendo Switch's pollfd and sockaddr_in (aarch64 `horizon`), not only the 3DS's.
+mio = { path = "third_party/mio" }
+# ring 0.17.14 building its AArch64 assembly for the Nintendo Switch (`horizon`, Linux's ABI).
+ring = { path = "third_party/ring" }
+# wgpu and wgpu-core 30.0.1 with their OpenGL ES backend on the Nintendo Switch (`horizon`).
+wgpu = { path = "third_party/wgpu" }
+wgpu-core = { path = "third_party/wgpu-core" }
+# cpal 0.16.0 with a Nintendo Switch host (libnx audout): src/host/horizon.
+cpal = { path = "third_party/cpal" }
 
 # Line tables keep file:line in backtraces; full debug info made every
 # example and test binary hundreds of megabytes and slow to link.

@@ -1132,14 +1132,19 @@ pub fn import(
     // Prism Launcher never downloads the server jar. Its client jar contains every server class
     // (and Prism's libraries are a superset of the server bundle's), so the client jar is the
     // server side of exporters and the data generator instead.
+    // `HORIZON_SERVER_FROM_CLIENT=1` does the same for the official launcher's copy, whose
+    // libraries are the client's too (docs/switch.md: a console port prepared on a computer
+    // with only the launcher's files).
+    let client_fallback =
+        files.prism.is_some() || std::env::var_os("HORIZON_SERVER_FROM_CLIENT").is_some();
     let (server, server_libraries, server_from_client) =
-        match import_server(lock, server_jar, files.prism.is_some())? {
+        match import_server(lock, server_jar, client_fallback)? {
             Some(server) => {
                 let (game, libraries) = unpack_server(server, &lock.directory, id)?;
                 (game, libraries, false)
             }
             None => {
-                log("Prism has no server jar: using its client jar for the server side");
+                log("No server jar: using the client jar for the server side");
                 (client.clone(), client_libraries.clone(), true)
             }
         };

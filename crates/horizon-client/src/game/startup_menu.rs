@@ -1250,7 +1250,18 @@ impl Loading {
         let Some(gui) = &self.gui else {
             // The pack's screens do not exist yet: the boot screen holds the
             // window, the wordmark and the console's lines while they load.
-            horizon_client::ui_theme::draw_boot(&self.boot, batch, &logs);
+            // The Nintendo Switch: a progress bar, not the console (minutes of it there).
+            if cfg!(target_os = "horizon") {
+                horizon_client::ui_theme::draw_boot_progress(
+                    &self.boot,
+                    batch,
+                    self.progress.line(),
+                    self.progress.fraction(),
+                    self.started.elapsed().as_secs_f32(),
+                );
+            } else {
+                horizon_client::ui_theme::draw_boot(&self.boot, batch, &logs);
+            }
             return;
         };
         // `Gui.setScreen` clears the focus of the screen it leaves

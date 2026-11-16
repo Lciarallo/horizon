@@ -176,6 +176,10 @@ impl Options {
     /// The command line alone: no file is read and nothing changes. `None` for `--help` and
     /// `--launch-api`, which print and end the run.
     pub(super) fn parse(mut args: impl Iterator<Item = String>) -> Result<Option<Self>> {
+        // The Nintendo Switch has no executable path: the resources are in the game's folder.
+        #[cfg(target_os = "horizon")]
+        let sibling = std::path::Path::new(horizon_switch::HOME).join("resources");
+        #[cfg(not(target_os = "horizon"))]
         let sibling = std::env::current_exe()?
             .parent()
             .ok_or("missing executable directory")?
@@ -186,7 +190,9 @@ impl Options {
             } else {
                 std::path::Path::new(".local/horizon-client").join(horizon_core::VANILLA_VERSION)
             },
-            distance: 12,
+            // The Switch: 4 GB shared with the GPU and a Tegra X1; vanilla's console editions
+            // stay near 8 chunks too.
+            distance: if cfg!(target_os = "horizon") { 4 } else { 12 },
             distance_override: None,
             seed: 0,
             creative: false,

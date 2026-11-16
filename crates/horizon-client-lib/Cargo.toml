@@ -83,10 +83,12 @@ gilrs = { version = "0.11", optional = true }
 # HTTPS to the Minecraft services (online-mode session join).
 ureq = { version = "2", default-features = false, features = ["tls"] }
 unicode-bidi = "0.3.18"
-# `LevelStorageAccess.estimateDiskSpace`: usable disk space, without unsafe code on Windows.
-fs4 = { version = "1.1.0", default-features = false, features = ["sync"] }
 
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(target_os = "horizon")'.dependencies]
+# Nintendo Switch homebrew: libnx startup, input, the window (docs/switch.md).
+horizon-switch = { path = "../horizon-switch" }
+
+[target.'cfg(all(unix, not(target_os = "horizon")))'.dependencies]
 # The server thread's CPU time per tick (`HORIZON_SPIKES`, spans.rs).
 rustix = { version = "1", default-features = false, features = ["std", "time", "process", "fs"] }
 
@@ -244,3 +246,7 @@ path = "../horizon-client/tests/wide_states.rs"
 [[example]]
 name = "chunk_encoding_bench"
 path = "../horizon-client/examples/chunk_encoding_bench.rs"
+
+[target.'cfg(not(target_os = "horizon"))'.dependencies]
+# `LevelStorageAccess.estimateDiskSpace`: usable disk space, without unsafe code on Windows.
+fs4 = { version = "1.1.0", default-features = false, features = ["sync"] }

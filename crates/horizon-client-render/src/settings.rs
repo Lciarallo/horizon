@@ -220,10 +220,10 @@ pub struct Settings {
 }
 impl Default for Settings {
     fn default() -> Self {
-        Self {
+        let settings = Self {
             fov: 70.0,
-            render_distance: 12,
-            simulation_distance: 12,
+            render_distance: if cfg!(target_os = "horizon") { 4 } else { 12 },
+            simulation_distance: if cfg!(target_os = "horizon") { 5 } else { 12 },
             sensitivity: 0.5,
             master_volume: 1.0,
             volumes: [1.0; 11],
@@ -302,7 +302,16 @@ impl Default for Settings {
             mods: Default::default(),
             shader_packs: Vec::new(),
             shader_options: None,
-        }
+        };
+        // The Nintendo Switch: the lightest preset, then its own distances (docs/switch.md).
+        #[cfg(target_os = "horizon")]
+        let settings = {
+            let mut settings = settings;
+            crate::graphics::apply_preset(crate::graphics::Preset::FullPerformance, &mut settings);
+            settings.render_distance = 4;
+            settings
+        };
+        settings
     }
 }
 fn put_f(f: &mut OptionsFile, key: &str, v: f32) {

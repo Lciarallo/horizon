@@ -1,0 +1,12 @@
+[package]
+name = "horizon-switch-mimalloc"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "mimalloc, on the Nintendo Switch too (its own primitives in third_party/libmimalloc-sys)"
+
+[lib]
+name = "mimalloc"
+
+[dependencies]
+real-mimalloc = { package = "mimalloc", version = "0.1.52", default-features = false }

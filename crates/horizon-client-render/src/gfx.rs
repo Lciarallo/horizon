@@ -2067,6 +2067,10 @@ fn backend_order(
     if os == "macos" || wgpu_backend {
         return vec![Backends::default()];
     }
+    // The Nintendo Switch's homebrew GPU driver is switch-mesa's OpenGL (docs/switch.md).
+    if os == "horizon" {
+        return vec![Backends::GL];
+    }
     let windows = os == "windows";
     match api {
         GraphicsApi::Auto if windows && arch == "aarch64" => {

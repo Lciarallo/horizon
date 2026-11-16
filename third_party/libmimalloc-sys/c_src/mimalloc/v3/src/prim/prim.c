@@ -18,6 +18,9 @@ terms of the MIT license. A copy of the license can be found in the file
 #define MI_USE_SBRK
 #include "wasi/prim.c"     // memory-grow or sbrk (Wasm)
 
+#elif defined(__SWITCH__)
+#include "horizon/prim.c"   // memalign from newlib (Nintendo Switch homebrew, Horizon's port)
+
 #elif defined(__EMSCRIPTEN__)
 #include "emscripten/prim.c" // emmalloc_*, + pthread support
 

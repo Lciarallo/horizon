@@ -1793,6 +1793,10 @@ impl Audio {
             self.devices_seen = output_devices();
             return true;
         }
+        // The Switch has one output, which never changes: there is nothing to look for.
+        if cfg!(target_os = "horizon") {
+            return false;
+        }
         if let Some(pending) = &self.device_probe {
             let Some(probe) = pending.lock().ok().and_then(|mut found| found.take()) else {
                 return false;

@@ -358,6 +358,8 @@ mod options;
 mod ordered_tick;
 mod packs;
 mod pad;
+#[cfg(target_os = "horizon")]
+mod switch_touch;
 mod pad_actions;
 mod pad_craft;
 mod pad_menu;
@@ -6265,6 +6267,11 @@ impl Game<'_> {
         if show_hud {
             self.draw_pad_guide(&mut batch, guide_from);
         }
+        // The Nintendo Switch's on-screen controls (game/switch_touch.rs).
+        #[cfg(target_os = "horizon")]
+        if show_hud {
+            self.draw_switch_touch(&mut batch);
+        }
         batch
     }
     fn draw_inventory(&mut self, batch: &mut HudBatch) {
@@ -11246,6 +11253,12 @@ impl Game<'_> {
                                 );
                             }
                             self.world_frames += 1;
+                            #[cfg(target_os = "horizon")]
+                            horizon_switch::world_frame(
+                                self.streaming.pending()
+                                    + self.pending_uploads.len()
+                                    + self.remote_backlog(),
+                            );
                         }
                         self.frames += 1;
                         self.fps_frames += 1;

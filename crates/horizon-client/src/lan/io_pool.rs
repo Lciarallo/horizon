@@ -9,7 +9,28 @@
 //! way: the pipe tells the thread when bytes arrive.
 use super::Body;
 use horizon_protocol::connection::{ConnReader, ConnWriter, Pipe, Socket};
-use mio::{Events, Interest, Poll, Registry, Token, Waker};
+#[cfg(not(target_os = "horizon"))]
+use mio::Waker;
+use mio::{Events, Interest, Poll, Registry, Token};
+#[cfg(target_os = "horizon")]
+use switch_waker::Waker;
+
+/// mio has no cross-thread waker on the Nintendo Switch (libnx has no pipe): a network
+/// thread polls at least every `SWITCH_POLL` instead, and waking it does nothing.
+#[cfg(target_os = "horizon")]
+mod switch_waker {
+    pub(super) struct Waker;
+    impl Waker {
+        pub(super) fn new(_: &mio::Registry, _: mio::Token) -> std::io::Result<Self> {
+            Ok(Waker)
+        }
+        pub(super) fn wake(&self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+}
+#[cfg(target_os = "horizon")]
+const SWITCH_POLL: Duration = Duration::from_millis(5);
 use std::{
     io::{ErrorKind, Read, Write},
     sync::{
@@ -340,6 +361,8 @@ fn run(mut poll: Poll, worker: &Arc<Worker>) {
     let mut sweep_at = Instant::now() + SWEEP;
     loop {
         let wait = sweep_at.saturating_duration_since(Instant::now());
+        #[cfg(target_os = "horizon")]
+        let wait = wait.min(SWITCH_POLL);
         if let Err(e) = poll.poll(&mut events, Some(wait))
             && e.kind() != ErrorKind::Interrupted
         {

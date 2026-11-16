@@ -1,0 +1,64 @@
+{
+  "arch": "aarch64",
+  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32",
+  "llvm-target": "aarch64-unknown-none",
+  "target-pointer-width": 64,
+  "max-atomic-width": 128,
+  "os": "horizon",
+  "env": "newlib",
+  "vendor": "nintendo",
+  "target-family": [
+    "unix"
+  ],
+  "features": "+v8a,+neon,+crypto,+crc",
+  "cpu": "cortex-a57",
+  "linker": "aarch64-none-elf-gcc",
+  "linker-flavor": "gnu-cc",
+  "linker-is-gnu": true,
+  "pre-link-args": {
+    "gnu-cc": [
+      "-specs=/opt/devkitpro/libnx/switch.specs",
+      "-march=armv8-a+crc+crypto",
+      "-mtune=cortex-a57",
+      "-mtp=soft",
+      "-fPIE",
+      "-Wl,--wrap=pthread_create",
+      "-Wl,--wrap=pthread_detach",
+      "-Wl,--wrap=pthread_join",
+      "-Wl,--wrap=rename"
+    ]
+  },
+  "executables": true,
+  "position-independent-executables": true,
+  "static-position-independent-executables": true,
+  "relocation-model": "pic",
+  "dynamic-linking": false,
+  "crt-static-default": true,
+  "crt-static-respected": true,
+  "has-thread-local": true,
+  "tls-model": "local-exec",
+  "panic-strategy": "unwind",
+  "relro-level": "off",
+  "eh-frame-header": true,
+  "stack-probes": {
+    "kind": "inline"
+  },
+  "emit-debug-gdb-scripts": false,
+  "metadata": {
+    "description": "Nintendo Switch homebrew (libnx, newlib)",
+    "std": true,
+    "tier": 3
+  },
+  "post-link-args": {
+    "gnu-cc": [
+      "-Wl,--start-group",
+      "-lstdc++",
+      "-lnx",
+      "-lc",
+      "-lsysbase",
+      "-lm",
+      "-lgcc",
+      "-Wl,--end-group"
+    ]
+  }
+}

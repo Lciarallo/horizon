@@ -115,6 +115,13 @@ fn main() {
         }
     }
 
+    // The Nintendo Switch (Horizon's port): its own primitives (src/prim/horizon), arenas of
+    // 64 MiB taken from newlib's heap as the game grows instead of 1 GiB up front.
+    if target_os == "horizon" {
+        build.define("__SWITCH__", None);
+        build.define("MI_DEFAULT_ARENA_RESERVE", "(64L*1024L)");
+    }
+
     build.compile("mimalloc");
 
     // on armv6 we need to link with libatomic

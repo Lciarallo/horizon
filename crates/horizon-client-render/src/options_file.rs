@@ -162,8 +162,9 @@ static TABLE: LazyLock<Vec<Def>> = LazyLock::new(|| {
         b("reducedDebugInfo", false),
         def("renderClouds", O(Clouds), V::Int(2)),
         i("cloudRange", 2, 128, 128),
-        i("renderDistance", 2, MAX_RENDER_DISTANCE, 12),
-        i("simulationDistance", 5, 32, 12),
+        // The Nintendo Switch (docs/switch.md): a Tegra X1 and 4 GB shared with the GPU.
+        i("renderDistance", 2, MAX_RENDER_DISTANCE, if cfg!(target_os = "horizon") { 4 } else { 12 }),
+        i("simulationDistance", 5, 32, if cfg!(target_os = "horizon") { 5 } else { 12 }),
         u("screenEffectScale", 1.0),
         def("soundDevice", O(AnyStr), V::Str(String::new())),
         b("vignette", true),

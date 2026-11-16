@@ -153,6 +153,11 @@ mod par_chunks_tests {
 /// a base M4 (4 performance and 6 efficiency cores) a fast flight's p99 frame went from
 /// 20 ms with 9 workers to 7 ms with 3 (#11294).
 pub fn default_workers() -> usize {
+    // The Nintendo Switch: 3 cores for the application, all of them to the workers, whose
+    // libnx threads run below the render and server threads (docs/switch.md).
+    if cfg!(target_os = "horizon") {
+        return worker_count().max(1);
+    }
     workers_for(worker_count(), performance_cores)
 }
 
@@ -243,6 +248,10 @@ fn parse_worker_count(value: Option<String>) -> Option<usize> {
 /// unprivileged thread lower its priority but not raise it (and the JVM
 /// leaves it there too). Whether the OS took it.
 pub fn favour_current() -> bool {
+    // The Nintendo Switch's three cores: the frame and the tick go first all the same.
+    if cfg!(target_os = "horizon") {
+        return favour();
+    }
     if std::thread::available_parallelism().map_or(1, |n| n.get()) <= 4 {
         return false;
     }
@@ -266,9 +275,30 @@ fn favour() -> bool {
     unsafe { SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL) != 0 }
 }
 
-#[cfg(not(any(target_vendor = "apple", windows)))]
+#[cfg(not(any(target_vendor = "apple", windows, target_os = "horizon")))]
 fn favour() -> bool {
     false
+}
+
+/// The Nintendo Switch: thread priorities through the kernel (the startup shim in
+/// horizon-switch). 0x2C is a normal thread's; lower numbers run first.
+#[cfg(target_os = "horizon")]
+mod switch_priority {
+    unsafe extern "C" {
+        fn horizon_switch_set_priority(priority: i32) -> bool;
+    }
+    pub(super) const FAVOURED: i32 = 0x2A;
+    pub(super) const BEHIND: i32 = 0x2E;
+    pub(super) const IDLE: i32 = 0x34;
+    pub(super) fn set(priority: i32) -> bool {
+        // SAFETY: changes the calling thread's own priority; no pointers.
+        unsafe { horizon_switch_set_priority(priority) }
+    }
+}
+
+#[cfg(target_os = "horizon")]
+fn favour() -> bool {
+    switch_priority::set(switch_priority::FAVOURED)
 }
 
 /// The CPU time the calling thread has used, where only an OS call gives it
@@ -385,7 +415,12 @@ fn behind() -> bool {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
+#[cfg(target_os = "horizon")]
+fn behind() -> bool {
+    switch_priority::set(switch_priority::BEHIND)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "android", target_os = "horizon")))]
 fn behind() -> bool {
     false
 }
@@ -401,7 +436,12 @@ pub fn far_terrain_current() -> bool {
     far()
 }
 
-#[cfg(not(any(target_vendor = "apple", windows)))]
+#[cfg(target_os = "horizon")]
+fn far() -> bool {
+    switch_priority::set(switch_priority::BEHIND)
+}
+
+#[cfg(not(any(target_vendor = "apple", windows, target_os = "horizon")))]
 fn far() -> bool {
     behind_server()
 }
@@ -485,7 +525,12 @@ fn idle() -> bool {
     unsafe { SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE) != 0 }
 }
 
-#[cfg(not(any(target_os = "linux", target_vendor = "apple", windows)))]
+#[cfg(target_os = "horizon")]
+fn idle() -> bool {
+    switch_priority::set(switch_priority::IDLE)
+}
+
+#[cfg(not(any(target_os = "linux", target_vendor = "apple", windows, target_os = "horizon")))]
 fn idle() -> bool {
     false
 }

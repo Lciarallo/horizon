@@ -213,12 +213,12 @@ impl Laps {
 /// with more wall time than CPU time waited (for a lock, or for a core on a
 /// busy machine).
 pub fn thread_cpu() -> Option<Duration> {
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "horizon")))]
     {
         let t = rustix::time::clock_gettime(rustix::time::ClockId::ThreadCPUTime);
         Some(Duration::new(t.tv_sec as u64, t.tv_nsec as u32))
     }
-    #[cfg(not(unix))]
+    #[cfg(any(not(unix), target_os = "horizon"))]
     horizon_threads::thread_cpu()
 }
 
@@ -564,6 +564,14 @@ pub mod startup {
     #[inline]
     pub fn step(name: &'static str) -> Option<Step> {
         let traced = on();
+        // The Nintendo Switch: a step's start too, so a step that never ends shows in the
+        // trace (docs/switch.md).
+        if traced && cfg!(target_os = "horizon") {
+            write(format_args!(
+                r#""ph":"i","s":"t","name":"begin {name}","ts":{}"#,
+                micros(Instant::now())
+            ));
+        }
         (traced || horizon_threads::HEAP_CENSUS).then(|| Step {
             name,
             started: Instant::now(),

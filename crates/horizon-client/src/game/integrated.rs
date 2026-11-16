@@ -507,6 +507,9 @@ impl Game<'_> {
         ));
         self.world_biomes_base = self.world_biomes.clone();
         let (res, pack, settings) = (self.res.clone(), self.pack.clone(), self.settings.clone());
+        // The Nintendo Switch: the CPU boosted while the world generates (docs/switch.md).
+        #[cfg(target_os = "horizon")]
+        horizon_switch::boost_for_loading();
         horizon_client::parallel::set_setting(settings.horizon.parallel_tick);
         let flags = Arc::new(Flags::default());
         flags

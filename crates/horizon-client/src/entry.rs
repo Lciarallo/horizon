@@ -3,8 +3,30 @@ use crate::{crash, game, logging};
 
 /// Start the game. The executable supplies the allocator and retains the mod API marker.
 pub fn main() {
+    // The Nintendo Switch: the loader gives the main thread a small stack, where desktops give
+    // 8 MiB; the game runs on a thread of its own with room for vanilla's deep recursions.
+    #[cfg(target_os = "horizon")]
+    {
+        switch_startup();
+        let game = std::thread::Builder::new()
+            .name("Render thread".into())
+            .stack_size(SWITCH_MAIN_STACK)
+            .spawn(|| main_with(Default::default()));
+        match game.map(std::thread::JoinHandle::join) {
+            Ok(Ok(())) => {}
+            Ok(Err(_)) => eprintln!("Horizon: the game thread panicked"),
+            Err(e) => eprintln!("Horizon: could not start the game thread: {e}"),
+        }
+        horizon_switch::log_flush();
+        return;
+    }
+    #[cfg(not(target_os = "horizon"))]
     main_with(Default::default());
 }
+
+/// The game thread's stack on the Switch.
+#[cfg(target_os = "horizon")]
+const SWITCH_MAIN_STACK: usize = 16 << 20;
 
 /// Start the game with trait mods in dispatch order.
 pub fn main_with(mods: crate::mod_api::Mods) {
@@ -325,13 +347,97 @@ pub fn main_with(mods: crate::mod_api::Mods) {
     logging::flush();
 }
 
+/// The Nintendo Switch (docs/switch.md): the game's folder on the SD card is its home and its
+/// working directory (saves, options, logs), and what would reach a terminal goes to a file
+/// there (or to `nxlink -s`).
+#[cfg(target_os = "horizon")]
+fn switch_startup() {
+    let home = std::path::Path::new(horizon_switch::HOME);
+    let _ = std::fs::create_dir_all(home);
+    horizon_switch::log_to_file(&format!("{}/horizon-output.log", horizon_switch::HOME));
+    if let Err(e) = std::env::set_current_dir(home) {
+        eprintln!("Horizon: game folder {}: {e}", home.display());
+    }
+    logging::set_game_home(home.to_path_buf());
+    horizon_switch::boost_for_loading();
+    let (total, used) = horizon_switch::memory();
+    println!(
+        "Horizon on Nintendo Switch: {} MiB of memory, {} MiB in use{}",
+        total >> 20,
+        used >> 20,
+        if horizon_switch::is_applet() { " (applet mode: start a game holding R for all of it)" } else { "" }
+    );
+    // Every 15 s, the memory in use: a stalled start tells working from stuck.
+    let _ = std::thread::Builder::new()
+        .name("Switch watchdog".into())
+        .stack_size(64 << 10)
+        .spawn(|| {
+            let started = std::time::Instant::now();
+            // After the log has opened.
+            std::thread::sleep(std::time::Duration::from_secs(8));
+            malloc_bench();
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(15));
+                let (total, _) = horizon_switch::memory();
+                log::info!(
+                    "Horizon: {} s up, heap {} of {} MiB",
+                    started.elapsed().as_secs(),
+                    horizon_switch::heap_in_use() >> 20,
+                    total >> 20
+                );
+            }
+        });
+    // A panic's message reaches the log before the program ends.
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        previous(info);
+        horizon_switch::log_flush();
+    }));
+}
+
+/// How fast the heap hands out small blocks, alone and with three threads at once: the
+/// Switch's heap is newlib's, behind one lock (docs/switch.md).
+#[cfg(target_os = "horizon")]
+fn malloc_bench() {
+    fn churn(n: usize) -> usize {
+        let mut keep: Vec<Vec<u8>> = Vec::with_capacity(64);
+        let mut sum = 0;
+        for i in 0..n {
+            let v = vec![i as u8; 16 + (i * 37) % 240];
+            sum += v.len();
+            if keep.len() < 64 {
+                keep.push(v);
+            } else {
+                keep[i % 64] = v;
+            }
+        }
+        sum + keep.len()
+    }
+    const N: usize = 200_000;
+    let t = std::time::Instant::now();
+    std::hint::black_box(churn(N));
+    let one = t.elapsed();
+    let t = std::time::Instant::now();
+    let threads: Vec<_> = (0..3).map(|_| std::thread::spawn(|| std::hint::black_box(churn(N)))).collect();
+    for thread in threads {
+        let _ = thread.join();
+    }
+    let three = t.elapsed();
+    log::info!(
+        "Horizon: heap {} allocations: 1 thread {:.0} ms, 3 threads at once {:.0} ms",
+        N,
+        one.as_secs_f64() * 1000.0,
+        three.as_secs_f64() * 1000.0
+    );
+}
+
 /// The JVM raises its open-file limit to the hard limit as it starts
 /// (`-XX:+MaxFDLimit`, on by default), so a vanilla server may hold as many
 /// sockets and region files as the host allows, not the soft default (often
 /// 1024 in a container). The same here; macOS caps it at `OPEN_MAX`, as the
 /// JVM does there.
 fn raise_open_file_limit() {
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "horizon")))]
     {
         use rustix::process::{Resource, Rlimit, getrlimit, setrlimit};
         let limit = getrlimit(Resource::Nofile);

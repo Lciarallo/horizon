@@ -7,8 +7,10 @@ rust-version.workspace = true
 description = "Scheduling hints for the game's threads and its allocator, and the other OS calls the crates that forbid unsafe code can't make"
 
 [dependencies]
-mimalloc = { version = "0.1.52", default-features = false }
-libmimalloc-sys = { version = "0.1.49", default-features = false, features = ["extended"] }
+# mimalloc and its bindings, through facades that are newlib's heap on the Nintendo Switch,
+# where mimalloc has no backend (switch/stubs, docs/switch.md).
+mimalloc = { package = "horizon-switch-mimalloc", path = "../../switch/stubs/mimalloc" }
+libmimalloc-sys = { package = "horizon-switch-libmimalloc-sys", path = "../../switch/stubs/libmimalloc-sys" }
 
 [target.'cfg(any(target_vendor = "apple", target_os = "linux", target_os = "android"))'.dependencies]
 libc = "0.2"

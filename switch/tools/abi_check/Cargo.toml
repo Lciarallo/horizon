@@ -1,0 +1,10 @@
+[package]
+name = "switch-abi-check"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+libc = { path = "../../../third_party/libc", default-features = false }

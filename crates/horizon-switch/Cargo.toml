@@ -1,0 +1,17 @@
+[package]
+name = "horizon-switch"
+version = "0.1.0"
+# Not `edition.workspace`: the smoke test (switch/smoke) builds this crate outside the workspace.
+edition = "2024"
+license = "MIT"
+rust-version = "1.95"
+description = "Nintendo Switch homebrew platform layer: libnx startup shim, bindings, input and window"
+build = "build.rs"
+
+[target.'cfg(target_os = "horizon")'.dependencies]
+# ring's getrandom 0.2 knows only the 3DS among `horizon` targets; its `custom` feature
+# lets this crate supply the bytes (libnx's csrng).
+getrandom02 = { package = "getrandom", version = "0.2", features = ["custom"] }
+
+[build-dependencies]
+cc = "1"
