@@ -326,6 +326,9 @@ impl<T: 'static> EventLoop<T> {
                 let n = self.exit_requested.get_or_insert(0);
                 *n += 1;
                 let n = *n;
+                if n == 1 {
+                    eprintln!("Horizon: the system asked the program to quit");
+                }
                 for window_id in self.windows.clone() {
                     self.window_event(&mut event_handler, window_id, event::WindowEvent::CloseRequested);
                 }

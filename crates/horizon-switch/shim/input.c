@@ -86,7 +86,13 @@ void horizon_switch_display_size(uint32_t *w, uint32_t *h) {
     }
 }
 
-bool horizon_switch_main_loop(void) { return appletMainLoop(); }
+/* Counted for the heartbeat in horizon_switch.c. */
+extern unsigned long horizon_switch_frames;
+
+bool horizon_switch_main_loop(void) {
+    __atomic_add_fetch(&horizon_switch_frames, 1, __ATOMIC_RELAXED);
+    return appletMainLoop();
+}
 
 /* The default window, for EGL (eglCreateWindowSurface takes the NWindow*). */
 void *horizon_switch_default_window(void) { return nwindowGetDefault(); }

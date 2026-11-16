@@ -53,6 +53,14 @@ after one, remove `target/switch/aarch64-nintendo-switch-newlib/*/build/std` so 
 The game's folder is `sdmc:/switch/horizon`: saves, `options.txt`, `logs/`, crash reports, and
 `horizon-output.log` (what the program printed, panics included). With
 `nxlink -s target/switch/horizon.nro` (Homebrew Menu, Y) the output comes to the computer instead.
+`horizon-heartbeat.txt` is rewritten every second by a thread of the startup shim that takes
+none of the game's locks: how long the program has been up, how many times its main loop has
+turned and how many threads it has started and joined. A program that ended stops it; a stuck
+one doesn't. When the main loop has not turned for 15 s, that thread also appends to
+`horizon-stall.log` where each thread stands (its frame chain as offsets in the ELF, for
+`addr2line`). An exit or abort leaves its caller's offset in `horizon-output.log`. Quitting
+ends the process and goes back to the HOME Menu, not to the Homebrew Menu: returning to its
+loader unmapped the game while its other threads still ran, and the loader then crashed.
 
 ## Controls
 
@@ -93,8 +101,20 @@ otherwise the `.nro` carries `switch/nro/icon.jpg`.
 - **Detached threads.** libnx has no `pthread_detach` (newlib answers `ENOSYS`), so a thread
   std detached (a dropped `JoinHandle`) was never closed, and after a few minutes every spawn
   failed with `ENOMEM` and the game quit. The shim also wraps `pthread_detach` and
-  `pthread_join`: a detached thread is joined by the next `pthread_create` or `pthread_detach`
-  once it has finished. The audio output, the console's only one, is not probed for changes.
+  `pthread_join`: a detached thread, once it has finished, is joined by a reaper thread that
+  holds no other lock (joining it from `pthread_create` can deadlock when the caller holds a lock
+  the exiting thread's destructors need). A joined thread's record leaves the list before the
+  join frees its `pthread_t`, which a thread created at that moment can get again. An empty
+  file `no-reaper` in the game's folder turns the reaper off, to tell its effects from the
+  game's. The audio output, the console's only one, is not probed for changes.
+- **GPU submissions.** devkitPro's libdrm_nouveau lists a submission's pieces of command
+  stream in a fixed array of 512 and appends to it without a check, trusting Mesa's
+  reservations; one past the end zeroes the buffer count after it, and the next reservation
+  then loops (`nouveau_pushbuf_space` and `pushbuf_validate` calling each other) until the
+  stack runs out. A failed submission leaves the thread spinning in a dump loop whose printing
+  is compiled out. `crates/horizon-switch/shim/gpu.c` (linked with `--wrap`) asks for every
+  reservation with a margin, reports a push that finds the array full and the caller that
+  made it, and reports a failed submission and leaves its entries queued for the next one.
 - **The shim** also supplies what newlib lacks (`getrandom` from libnx's csrng, `sysconf`,
   `posix_memalign`, `pread`/`pwrite`), opens the sockets service and sends output to nxlink or
   the SD card.

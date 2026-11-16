@@ -13,7 +13,7 @@ pub fn main() {
             .stack_size(SWITCH_MAIN_STACK)
             .spawn(|| main_with(Default::default()));
         match game.map(std::thread::JoinHandle::join) {
-            Ok(Ok(())) => {}
+            Ok(Ok(())) => eprintln!("Horizon: the game thread returned"),
             Ok(Err(_)) => eprintln!("Horizon: the game thread panicked"),
             Err(e) => eprintln!("Horizon: could not start the game thread: {e}"),
         }

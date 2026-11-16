@@ -25,7 +25,12 @@
       "-Wl,--wrap=pthread_create",
       "-Wl,--wrap=pthread_detach",
       "-Wl,--wrap=pthread_join",
-      "-Wl,--wrap=rename"
+      "-Wl,--wrap=rename",
+      "-Wl,--wrap=exit",
+      "-Wl,--wrap=abort",
+      "-Wl,--wrap=nouveau_pushbuf_space",
+      "-Wl,--wrap=nouveau_pushbuf_data",
+      "-Wl,--wrap=nvGpuChannelKickoff"
     ]
   },
   "executables": true,
